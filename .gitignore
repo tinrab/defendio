@@ -1,0 +1,19 @@
+# misc
+**/.idea/
+*.log
+.DS_Store
+*.pem
+*.swp
+/.vscode
+*.code-workspace
+*.local
+
+# Cargo
+**/debug
+**/target
+*.rs.bk
+
+# build
+**/build/
+**/target/
+**/out/
