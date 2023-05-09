@@ -7,7 +7,7 @@ mod load_state;
 pub enum AppState {
     #[default]
     Load,
-    MainMenu,
+    Game,
 }
 
 pub struct AppStatePlugin {}

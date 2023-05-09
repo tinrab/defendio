@@ -24,3 +24,6 @@ bevy = { version = "0.10.1" }
 leafwing-input-manager = "0.9.2"
 bracket-noise = "0.8.7"
 rand = "0.8.5"
+smallvec = "1.10.0"
+bitflags = "2.2.1"
+array-init = "2.1.0"

@@ -20,7 +20,8 @@ pub type CustomActionState = ActionState<InputAction>;
 
 impl Plugin for InputActionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(InputManagerPlugin::<InputAction>::default());
+        app.add_plugin(InputManagerPlugin::<InputAction>::default())
+            .add_startup_system(spawn_input_manager);
     }
 }
 
@@ -37,4 +38,12 @@ impl InputActionPlugin {
         m.insert(MouseButton::Left, InputAction::Fire);
         m
     }
+}
+
+fn spawn_input_manager(mut commands: Commands) {
+    commands
+        .spawn(InputManagerBundle::<InputAction> {
+            action_state: ActionState::default(),
+            input_map: InputActionPlugin::default_input_map(),
+        });
 }
