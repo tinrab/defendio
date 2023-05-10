@@ -1,4 +1,8 @@
+use bevy::core_pipeline::bloom::BloomSettings;
+use bevy::core_pipeline::clear_color::ClearColorConfig;
+use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
+use bevy::render::camera::ScalingMode;
 use leafwing_input_manager::prelude::*;
 use crate::interaction::input_action::InputAction;
 use crate::state::AppState;
@@ -27,15 +31,39 @@ pub struct MainCameraBundle {
 
 const CAMERA_BASE_SPEED: f32 = 300.0f32;
 
+impl MainCameraBundle {
+    pub fn new() -> Self {
+        MainCameraBundle {
+            camera: MainCameraComponent {
+                target_position: Vec3::ZERO,
+            },
+            camera2d: Camera2dBundle {
+                camera: Camera {
+                    hdr: true,
+                    ..Default::default()
+                },
+                camera_2d: Camera2d {
+                    clear_color: ClearColorConfig::Custom(Color::BLACK),
+                },
+                projection: OrthographicProjection {
+                    far: 1000.0,
+                    scaling_mode: ScalingMode::WindowSize(10.0),
+                    ..Default::default()
+                },
+                tonemapping: Tonemapping::TonyMcMapface,
+                ..Default::default()
+            },
+        }
+    }
+}
+
 fn on_game_state_enter(
     mut commands: Commands,
 ) {
-    commands.spawn(MainCameraBundle {
-        camera: MainCameraComponent {
-            target_position: Vec3::ZERO,
-        },
-        camera2d: Default::default(),
-    });
+    commands.spawn((
+        MainCameraBundle::new(),
+        BloomSettings::OLD_SCHOOL,
+    ));
 }
 
 fn move_camera(
@@ -44,7 +72,7 @@ fn move_camera(
     input_query: Query<&ActionState<InputAction>>,
 //     mut query: Query<(&mut MainCameraComponent, &mut Transform)>,
 ) {
-    let  (camera, mut camera_transform) = query.single_mut();
+    let (camera, mut camera_transform) = query.single_mut();
     // let player_transform = player_query.single();
 
     // camera.target_position = Some(player_transform.translation);
@@ -52,12 +80,12 @@ fn move_camera(
     let mut dv = Vec3::ZERO;
     if action_state.pressed(InputAction::Left) {
         dv.x -= 1.0f32;
-    } else  if action_state.pressed(InputAction::Right) {
+    } else if action_state.pressed(InputAction::Right) {
         dv.x += 1.0f32;
     }
     if action_state.pressed(InputAction::Up) {
         dv.y += 1.0f32;
-    } else  if action_state.pressed(InputAction::Down) {
+    } else if action_state.pressed(InputAction::Down) {
         dv.y -= 1.0f32;
     }
     camera_transform.translation += (dv) * CAMERA_BASE_SPEED * time.delta_seconds();

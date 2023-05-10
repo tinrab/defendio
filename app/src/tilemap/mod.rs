@@ -60,12 +60,12 @@ impl TilemapBundle {
 
         let mesh = make_chunk_mesh(chunk);
         // let mesh = Mesh::from(shape::Quad::new(Vec2::splat(TILEMAP_CHUNK_SIZE as f32)));
-        println!("{:#?}", mesh);
+        // println!("{:#?}", mesh);
 
         TilemapBundle {
             obj: MaterialMesh2dBundle {
                 mesh: meshes.add(mesh).into(),
-                transform: Transform::default().with_scale(Vec3::splat(100.0f32)),
+                transform: Transform::default(),
                 material: materials.add(TilemapMaterial {
                     texture: texture_atlas.texture.clone(),
                 }),
@@ -85,7 +85,6 @@ fn make_chunk_mesh(chunk: &ChunkData) -> Mesh {
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
     let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(num_vertices);
     let mut indices: Vec<u32> = Vec::with_capacity(num_indices);
-
 
     for y in 0..x_vertex_count {
         for x in 0..x_vertex_count {

@@ -11,8 +11,6 @@ path = "src/lib.rs"
 name = "defendio_app"
 path = "src/main.rs"
 
-[features]
-
 [dependencies]
 thiserror = "1.0.40"
 config = "0.13.3"

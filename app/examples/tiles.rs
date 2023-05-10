@@ -45,10 +45,18 @@ fn on_game_state_enter (
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<TilemapMaterial>>,
+    mut color_materials: ResMut<Assets<ColorMaterial>>,
     images:Res<Assets<Image>>,
     core_asset_set: Res<CoreAssetSet>,
     texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: meshes.add(shape::Circle::new(1.0).into()).into(),
+        material: color_materials.add(ColorMaterial::from(Color::rgb(7.5, 0.0, 7.5))),
+        transform: Transform::from_translation(Vec3::new(-0.5, 0., 0.1)),
+        ..default()
+    });
+
     commands.spawn(TilemapBundle::build(
         meshes,
         materials,
