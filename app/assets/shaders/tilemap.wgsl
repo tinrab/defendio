@@ -1,3 +1,7 @@
+#ifdef TONEMAP_IN_SHADER
+#import bevy_core_pipeline::tonemapping
+#endif
+
 struct TilemapMaterial {
     color: vec4<f32>,
 };
@@ -20,6 +24,9 @@ fn fragment(
     var output_color: vec4<f32> = textureSample(color_texture, color_sampler, in.uv);
     #ifdef VERTEX_COLORS
         output_color = output_color * in.color;
+    #endif
+    #ifdef TONEMAP_IN_SHADER
+        output_color = tone_mapping(output_color);
     #endif
     return output_color;
 }

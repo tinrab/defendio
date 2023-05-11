@@ -13,7 +13,7 @@ pub mod material;
 pub mod generator;
 pub mod data;
 
-pub const TILEMAP_CHUNK_SIZE: usize =32;
+pub const TILEMAP_CHUNK_SIZE: u32 = 32;
 
 #[derive(Bundle)]
 pub struct TilemapBundle {
@@ -21,13 +21,13 @@ pub struct TilemapBundle {
     obj: MaterialMesh2dBundle<TilemapMaterial>,
 }
 
-const QUAD_INDICES: [usize; 6] = [0, 2, 3, 0, 1, 2];
+const QUAD_INDICES: [u32; 6] = [0, 2, 3, 0, 1, 2];
 
 const QUAD_VERTEX_POSITIONS: [Vec2; 4] = [
-    Vec2::new(-0.5, -0.5),
-    Vec2::new(0.5, -0.5),
-    Vec2::new(0.5, 0.5),
-    Vec2::new(-0.5, 0.5),
+    Vec2::new(0.0, 0.0),
+    Vec2::new(1.0, 0.0),
+    Vec2::new(1.0, 1.0),
+    Vec2::new(0.0, 1.0),
 ];
 
 const QUAD_UVS: [Vec2; 4] = [
@@ -45,22 +45,12 @@ impl TilemapBundle {
         core_asset_set: Res<CoreAssetSet>,
         texture_atlases: Res<Assets<TextureAtlas>>,
     ) -> Self {
-        // let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        // mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]);
-        // mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 0.1], [0.0, 0.0, 0.1], [0.0, 0.0, 0.1]]);
-        // mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]);
-        // mesh.set_indices(Some(Indices::U32(vec![0, 2, 1])));
-
-        // let mut mesh = Mesh::from(shape::Quad::new(Vec2::new(1.0f32, 1.0f32)));
-
         let tilemap = RandomTilemapGenerator::generate();
         let chunk = tilemap.get_chunk(IVec2::ZERO).unwrap();
         let texture_atlas = texture_atlases.get(&core_asset_set.tiles_atlas).unwrap();
-        // // let tiles_image = images.get_handle(&core_asset_set.tiles_atlas.clone_untyped().typed()).unwrap();
+        let texture = images.get(&texture_atlas.texture).unwrap();
 
-        let mesh = make_chunk_mesh(chunk);
-        // let mesh = Mesh::from(shape::Quad::new(Vec2::splat(TILEMAP_CHUNK_SIZE as f32)));
-        // println!("{:#?}", mesh);
+        let mesh = make_chunk_mesh(chunk, texture_atlas, texture);
 
         TilemapBundle {
             obj: MaterialMesh2dBundle {
@@ -75,42 +65,38 @@ impl TilemapBundle {
     }
 }
 
+fn make_chunk_mesh(chunk: &ChunkData, texture_atlas: &TextureAtlas,texture:&Image) -> Mesh {
+    const DEFAULT_CAPACITY: usize = TILEMAP_CHUNK_SIZE as usize * 4;
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(DEFAULT_CAPACITY);
+    // let mut normals: Vec<[f32; 3]> = Vec::with_capacity(DEFAULT_CAPACITY);
+    let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(DEFAULT_CAPACITY);
+    let mut indices: Vec<u32> = Vec::with_capacity(DEFAULT_CAPACITY);
 
-fn make_chunk_mesh(chunk: &ChunkData) -> Mesh {
-    let x_vertex_count = TILEMAP_CHUNK_SIZE as u32 + 2;
-    let num_vertices = (x_vertex_count * x_vertex_count) as usize;
-    let num_indices = ((x_vertex_count - 1) * (x_vertex_count - 1) * 6) as usize;
+    let mut stride = 0u32;
+    for y in 0..TILEMAP_CHUNK_SIZE {
+        for x in 0..TILEMAP_CHUNK_SIZE {
+            let tile = chunk.get_tile_at(x, y);
 
-    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
-    let mut normals: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
-    let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(num_vertices);
-    let mut indices: Vec<u32> = Vec::with_capacity(num_indices);
+            positions.extend(QUAD_VERTEX_POSITIONS.map(|p| [p.x  + x as f32, p.y + y as f32, 0.0]));
 
-    for y in 0..x_vertex_count {
-        for x in 0..x_vertex_count {
-            let tx = x as f32 / (x_vertex_count - 1) as f32;
-            let ty = y as f32 / (x_vertex_count - 1) as f32;
-            positions.push([(-0.5 + tx) * TILEMAP_CHUNK_SIZE as f32,  (-0.5 + ty) * TILEMAP_CHUNK_SIZE as f32,0.0,]);
-            normals.push(Vec3::Z.to_array());
-            uvs.push([tx, 1.0 - ty]);
-        }
-    }
+            let rect = texture_atlas.textures[tile.atlas_index];
+            let uv_min = rect.min / texture.size();
+            let uv_max = rect.max / texture.size();
+            uvs.extend([
+                [uv_min.x, uv_max.y],
+                [uv_max.x, uv_max.y],
+                [uv_max.x, uv_min.y],
+                [uv_min.x, uv_min.y],
+            ]);
 
-    for y in 0..x_vertex_count - 1 {
-        for x in 0..x_vertex_count - 1 {
-            let quad = y * x_vertex_count + x;
-            indices.push(quad + x_vertex_count + 1);
-            indices.push(quad + 1);
-            indices.push(quad + x_vertex_count);
-            indices.push(quad);
-            indices.push(quad + x_vertex_count);
-            indices.push(quad + 1);
+            indices.extend(QUAD_INDICES.map(|i| i + stride));
+            stride += 4;
         }
     }
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    // mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     mesh.set_indices(Some(Indices::U32(indices)));
     mesh

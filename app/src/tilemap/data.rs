@@ -10,12 +10,12 @@ pub struct TilemapData {
 
 #[derive(Debug, Clone)]
 pub struct ChunkData {
-    pub tiles: [TileData; TILEMAP_CHUNK_SIZE * TILEMAP_CHUNK_SIZE],
+    pub tiles: [TileData; TILEMAP_CHUNK_SIZE as usize * TILEMAP_CHUNK_SIZE as usize],
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct TileData {
-    pub id: u16,
+    pub atlas_index: usize,
     pub color: Option<Color>,
 }
 
@@ -24,7 +24,7 @@ impl TilemapData {
         TilemapData { chunks: Default::default() }
     }
 
-    pub fn get_chunk(&self, location:IVec2) -> Option<&ChunkData> {
+    pub fn get_chunk(&self, location: IVec2) -> Option<&ChunkData> {
         self.chunks.get(&location.x)?.get(&location.y)
     }
 
@@ -47,8 +47,8 @@ impl TilemapData {
         let mut max = Vec2::ZERO;
         for (x, columns) in self.chunks.iter() {
             for (y, _) in columns.iter() {
-                min = min.min(Vec2::new((*x) as f32,(*y) as f32));
-                max = max.max(Vec2::new((*x) as f32,(*y) as f32));
+                min = min.min(Vec2::new((*x) as f32, (*y) as f32));
+                max = max.max(Vec2::new((*x) as f32, (*y) as f32));
             }
         }
         Rect::from_corners(min, max)
@@ -60,12 +60,28 @@ impl ChunkData {
         ChunkData { tiles: array_init(|_| TileData::default()) }
     }
 
+    pub fn get_tile(& self, location: UVec2) -> &TileData {
+        self.get_tile_at(location.x, location.y)
+    }
+
+    pub fn get_tile_at(& self, x: u32, y: u32) -> &TileData {
+        &self.tiles[Self::tile_index_at(x, y) ]
+    }
+
     pub fn set_tile(&mut self, location: UVec2, tile: TileData) {
-        self.tiles[Self::tile_index(location)] = tile;
+        self.set_tile_at(location.x, location.y, tile);
+    }
+
+    pub fn set_tile_at(&mut self, x: u32, y: u32, tile: TileData) {
+        self.tiles[Self::tile_index_at(x, y)] = tile;
     }
 
     pub fn tile_index(location: UVec2) -> usize {
-        location.y as usize + location.x as usize * TILEMAP_CHUNK_SIZE
+        Self::tile_index_at(location.x, location.y)
+    }
+
+    pub fn tile_index_at(x: u32, y: u32) -> usize {
+        y as usize + x as usize * TILEMAP_CHUNK_SIZE as usize
     }
 
     pub fn tilemap_to_chunk_tile(location: IVec2) -> UVec2 {
@@ -76,9 +92,9 @@ impl ChunkData {
 }
 
 impl TileData {
-    pub fn new(id: u16) -> Self {
+    pub fn new(atlas_index: usize) -> Self {
         TileData {
-            id,
+            atlas_index,
             color: None,
         }
     }

@@ -51,7 +51,7 @@ fn on_game_state_enter (
     texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
     commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::new(1.0).into()).into(),
+        mesh: meshes.add(shape::Circle::new(0.5).into()).into(),
         material: color_materials.add(ColorMaterial::from(Color::rgb(7.5, 0.0, 7.5))),
         transform: Transform::from_translation(Vec3::new(-0.5, 0., 0.1)),
         ..default()

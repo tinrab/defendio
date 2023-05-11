@@ -29,7 +29,7 @@ pub struct MainCameraBundle {
     camera2d: Camera2dBundle,
 }
 
-const CAMERA_BASE_SPEED: f32 = 300.0f32;
+const CAMERA_BASE_SPEED: f32 = 50.0f32;
 
 impl MainCameraBundle {
     pub fn new() -> Self {
@@ -47,7 +47,7 @@ impl MainCameraBundle {
                 },
                 projection: OrthographicProjection {
                     far: 1000.0,
-                    scaling_mode: ScalingMode::WindowSize(10.0),
+                    scaling_mode: ScalingMode::WindowSize(32.0),
                     ..Default::default()
                 },
                 tonemapping: Tonemapping::TonyMcMapface,

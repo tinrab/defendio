@@ -20,7 +20,7 @@ impl RandomTilemapGenerator {
         for y in -10..=10 {
             for x in -10..=10 {
                 let n = noise.get_noise((x as f32) / 100.0 , (y as f32) / 100.0);
-                let id = (n.abs() * 5.0) as u16;
+                let id = (n.abs() * 5.0) as usize;
                 tilemap.set_tile(IVec2::new(x, y), TileData::new(id));
             }
         }
