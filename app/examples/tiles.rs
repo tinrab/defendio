@@ -9,6 +9,7 @@ use defendio_app::asset::CoreAssetSet;
 use defendio_app::camera::{MainCameraBundle, MainCameraPlugin};
 use defendio_app::interaction::input_action::InputActionPlugin;
 use defendio_app::interaction::InteractionPlugin;
+use defendio_app::lighting::{LightBundle, LightingPlugin};
 use defendio_app::state::{AppState, AppStatePlugin};
 use defendio_app::tilemap::material::TilemapMaterial;
 use defendio_app::tilemap::plugin::TilemapPlugin;
@@ -32,8 +33,9 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 
         .add_plugin(AppStatePlugin {})
         .add_plugin(InteractionPlugin{})
-        .add_plugin(TilemapPlugin {})
         .add_plugin(MainCameraPlugin{})
+        .add_plugin(LightingPlugin{})
+        .add_plugin(TilemapPlugin {})
 
         .add_system(on_game_state_enter.in_schedule(OnEnter(AppState::Game)))
         .add_system(on_game_state_update.in_set(OnUpdate(AppState::Game)))
@@ -50,20 +52,31 @@ fn on_game_state_enter (
     core_asset_set: Res<CoreAssetSet>,
     texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::new(0.5).into()).into(),
-        material: color_materials.add(ColorMaterial::from(Color::rgb(7.5, 0.0, 7.5))),
-        transform: Transform::from_translation(Vec3::new(-0.5, 0., 0.1)),
-        ..default()
-    });
-
+    // commands.spawn(MaterialMesh2dBundle {
+    //     mesh: meshes.add(shape::Circle::new(0.5).into()).into(),
+    //     material: color_materials.add(ColorMaterial::from(Color::rgb(7.5, 0.0, 7.5))),
+    //     transform: Transform::from_translation(Vec3::new(-0.5, 0., 0.1)),
+    //     ..default()
+    // });
     commands.spawn(TilemapBundle::build(
-        meshes,
+        meshes.as_mut(),
         materials,
         images,
         core_asset_set,
         texture_atlases,
     ));
+
+    // commands.spawn((
+    //     MaterialMesh2dBundle {
+    //         mesh: meshes.add(make_light_mesh()).into(),
+    //         material: color_materials.add(ColorMaterial::from(Color::RED)),
+    //         transform: Transform::from_translation(Vec3::new(0.0,0.0,1.0)),
+    //         ..Default::default()
+    //     }
+    // ));
+
+    LightBundle::spawn(&mut commands, &mut meshes);
+
 }
 
 fn on_game_state_update (

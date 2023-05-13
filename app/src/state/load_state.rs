@@ -20,12 +20,14 @@ pub fn on_load_enter(
     let tiles_image: Handle<Image> = asset_server.load("graphics/tiles.png");
     let tiles_atlas: Handle<TextureAtlas> = texture_atlases.add(TextureAtlas::from_grid(tiles_image.clone(), Vec2::new(8.0f32,8.0f32),8,8,None,None));
     let tilemap_shader: Handle<Shader> = asset_server.load("shaders/tilemap.wgsl");
+    let light_shader: Handle<Shader> = asset_server.load("shaders/light.wgsl");
 
     commands.insert_resource(AssetLoadState {
         check_timer: Timer::from_seconds(0.1f32, TimerMode::Repeating),
         handles: vec![
             tiles_image.clone_untyped(),
             tilemap_shader.clone_untyped(),
+            light_shader.clone_untyped(),
         ],
         loaded_handles: Default::default(),
     });

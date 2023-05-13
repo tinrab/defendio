@@ -39,7 +39,7 @@ const QUAD_UVS: [Vec2; 4] = [
 
 impl TilemapBundle {
     pub fn build(
-        mut meshes: ResMut<Assets<Mesh>>,
+        meshes: &mut Assets<Mesh>,
         mut materials: ResMut<Assets<TilemapMaterial>>,
         images: Res<Assets<Image>>,
         core_asset_set: Res<CoreAssetSet>,

@@ -1464,6 +1464,7 @@ dependencies = [
  "bevy",
  "bitflags 2.2.1",
  "bracket-noise",
+ "bytemuck",
  "chrono",
  "config",
  "itertools",
