@@ -1,4 +1,5 @@
 use bevy::core_pipeline::core_3d::Transparent3d;
+use bevy::ecs::query::ROQueryItem;
 use bevy::ecs::system::lifetimeless::{Read, SRes};
 use bevy::ecs::system::SystemParamItem;
 use bevy::pbr::{MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup, SetMeshViewBindGroup};
@@ -6,16 +7,17 @@ use bevy::prelude::*;
 use bevy::render::mesh::{GpuBufferInfo, MeshVertexBufferLayout};
 use bevy::render::render_asset::RenderAssets;
 use bevy::render::render_phase::{DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase, SetItemPipeline, TrackedRenderPass};
-use bevy::render::render_resource::{Buffer, BufferInitDescriptor, BufferUsages, PipelineCache, RenderPipelineDescriptor, SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
+use bevy::render::render_resource::{Buffer, BufferInitDescriptor, BufferUsages, PipelineCache, RenderPipelineDescriptor, SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines, SpecializedRenderPipeline, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
 use bevy::render::renderer::RenderDevice;
 use bevy::render::view::ExtractedView;
-use bevy::sprite::{Mesh2dHandle, SetMesh2dBindGroup, SetMesh2dViewBindGroup};
+use bevy::sprite::{Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, SetMesh2dBindGroup, SetMesh2dViewBindGroup};
 use crate::lighting::light_material::{LightInstanceData, InstanceMaterialData};
+use crate::lighting::light_mesh::ATTRIBUTE_INTENSITY;
 
 #[derive(Resource)]
 pub struct LightingPipeline {
     shader: Handle<Shader>,
-    mesh_pipeline: MeshPipeline,
+    mesh_pipeline: Mesh2dPipeline,
 }
 
 pub type DrawLighting = (
@@ -32,7 +34,7 @@ impl FromWorld for LightingPipeline {
         let asset_server = world.resource::<AssetServer>();
         let shader = asset_server.load("shaders/light.wgsl");
 
-        let mesh_pipeline = world.resource::<MeshPipeline>();
+        let mesh_pipeline = world.resource::<Mesh2dPipeline>();
 
         LightingPipeline {
             shader,
@@ -42,7 +44,7 @@ impl FromWorld for LightingPipeline {
 }
 
 impl SpecializedMeshPipeline for LightingPipeline {
-    type Key = MeshPipelineKey;
+    type Key = Mesh2dPipelineKey;
 
     fn specialize(
         &self,
@@ -51,6 +53,12 @@ impl SpecializedMeshPipeline for LightingPipeline {
     ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
         let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
         descriptor.vertex.shader = self.shader.clone();
+        descriptor.vertex.buffers = vec![
+            layout.get_layout(&[
+                Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+                ATTRIBUTE_INTENSITY.at_shader_location(1),
+            ])?
+        ];
         descriptor.vertex.buffers.push(VertexBufferLayout {
             array_stride: std::mem::size_of::<LightInstanceData>() as u64,
             step_mode: VertexStepMode::Instance,
@@ -61,7 +69,7 @@ impl SpecializedMeshPipeline for LightingPipeline {
                     offset: 0,
                     shader_location: 2,
                 },
-                // i_color
+                // color
                 VertexAttribute {
                     format: VertexFormat::Float32x4,
                     offset: VertexFormat::Float32x4.size(),
@@ -77,18 +85,18 @@ impl SpecializedMeshPipeline for LightingPipeline {
 impl<P: PhaseItem> RenderCommand<P> for DrawMeshInstanced {
     type Param = SRes<RenderAssets<Mesh>>;
     type ViewWorldQuery = ();
-    type ItemWorldQuery = (Read<Handle<Mesh>>, Read<InstanceBuffer>);
+    type ItemWorldQuery = (Read<Mesh2dHandle>, Read<InstanceBuffer>);
 
     #[inline]
     fn render<'w>(
         _item: &P,
         _view: (),
-        (mesh_handle, instance_buffer): (&'w Handle<Mesh>, &'w InstanceBuffer),
+        (mesh_handle, instance_buffer): (&'w Mesh2dHandle, &'w InstanceBuffer),
         meshes: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         // TODO pass.set_push_constants()
-        let gpu_mesh = match meshes.into_inner().get(mesh_handle) {
+        let gpu_mesh = match meshes.into_inner().get(&mesh_handle.0) {
             Some(gpu_mesh) => gpu_mesh,
             None => return RenderCommandResult::Failure,
         };

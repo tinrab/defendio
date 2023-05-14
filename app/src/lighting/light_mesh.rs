@@ -1,16 +1,20 @@
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy::render::mesh::{Indices, MeshVertexAttribute, PrimitiveTopology};
+use bevy::render::render_resource::VertexFormat;
+
+pub const ATTRIBUTE_INTENSITY: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertex_Intensity", 100_000, VertexFormat::Float32);
 
 pub fn make_light_mesh() -> Mesh {
-    const RADIUS: f32 = 10.0f32;
-    const SIDES: usize = 64;
+    const RADIUS: f32 = 1.0f32;
+    const SIDES: usize = 32;
 
     let mut positions = Vec::with_capacity(SIDES);
-    let mut colors = Vec::with_capacity(SIDES);
+    let mut intensities = Vec::with_capacity(SIDES);
     let mut indices = Vec::with_capacity((SIDES - 2) * 3);
 
     positions.push([0.0, 0.0, 0.0]);
-    colors.push(Color::WHITE.as_rgba_f32());
+    intensities.push(1.0f32);
 
     let step = std::f32::consts::TAU / SIDES as f32;
     for i in 0..SIDES {
@@ -18,7 +22,7 @@ pub fn make_light_mesh() -> Mesh {
         let (sin, cos) = theta.sin_cos();
 
         positions.push([cos * RADIUS, sin * RADIUS, 0.0]);
-        colors.push([0.0, 0.0, 0.0, 0.0]);
+        intensities.push(0.0f32);
     }
 
     for i in 1..=SIDES as u32 {
@@ -28,7 +32,7 @@ pub fn make_light_mesh() -> Mesh {
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    mesh.insert_attribute(ATTRIBUTE_INTENSITY, intensities);
     mesh.set_indices(Some(Indices::U32(indices)));
 
     mesh
