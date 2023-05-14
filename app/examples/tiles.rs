@@ -17,38 +17,39 @@ use defendio_app::tilemap::TilemapBundle;
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     App::new()
-        .add_plugins(DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    resolution: WindowResolution::new(1280.0, 720.0).with_scale_factor_override(1.0),
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::new(1280.0, 720.0)
+                            .with_scale_factor_override(1.0),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .set(AssetPlugin {
+                    watch_for_changes: true,
                     ..Default::default()
                 }),
-                ..Default::default()
-            })
-            .set(AssetPlugin {
-            watch_for_changes: true,
-            ..Default::default()
-        }))
+        )
         .add_system(bevy::window::close_on_esc)
-
         .add_plugin(AppStatePlugin {})
-        .add_plugin(InteractionPlugin{})
-        .add_plugin(MainCameraPlugin{})
-        .add_plugin(LightingPlugin{})
+        .add_plugin(InteractionPlugin {})
+        .add_plugin(MainCameraPlugin {})
+        .add_plugin(LightingPlugin {})
         .add_plugin(TilemapPlugin {})
-
         .add_system(on_game_state_enter.in_schedule(OnEnter(AppState::Game)))
         .add_system(on_game_state_update.in_set(OnUpdate(AppState::Game)))
         .run();
     Ok(())
 }
 
-fn on_game_state_enter (
+fn on_game_state_enter(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<TilemapMaterial>>,
     mut color_materials: ResMut<Assets<ColorMaterial>>,
-    images:Res<Assets<Image>>,
+    images: Res<Assets<Image>>,
     core_asset_set: Res<CoreAssetSet>,
     texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
@@ -74,14 +75,20 @@ fn on_game_state_enter (
     //         ..Default::default()
     //     }
     // ));
-
-    LightBundle::spawn(&mut commands, &mut meshes);
-
+    for _ in 0..100 {
+        commands.spawn(LightBundle::new(
+            Vec3::new(
+                rand::random::<f32>() * 70.0,
+                rand::random::<f32>() * 70.0,
+                2.0,
+            ),
+            rand::random::<f32>() * 10.0 + 2.0,
+            Color::hsl(rand::random::<f32>() * 360.0, 0.9, 0.6),
+        ));
+    }
 }
 
-fn on_game_state_update (
-) {
-}
+fn on_game_state_update() {}
 
 // fn update_images_system(
 //     mut images: ResMut<Assets<Image>>,

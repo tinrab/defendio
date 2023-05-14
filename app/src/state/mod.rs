@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::state::load_state::{on_load_enter, on_load_exit, on_load_update};
+use bevy::prelude::*;
 
 mod load_state;
 

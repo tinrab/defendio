@@ -18,8 +18,6 @@ macro_rules! impl_internal_errors {
         )*
     };
 }
-impl_internal_errors!(
-    ConfigError,
-);
+impl_internal_errors!(ConfigError,);
 
 pub type AppResult<T> = Result<T, AppError>;

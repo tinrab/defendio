@@ -1,6 +1,6 @@
+use crate::tilemap::material::TilemapMaterial;
 use bevy::prelude::*;
 use bevy::sprite::Material2dPlugin;
-use crate::tilemap::material::TilemapMaterial;
 
 pub struct TilemapPlugin;
 

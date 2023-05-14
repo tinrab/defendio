@@ -26,7 +26,7 @@ pub fn make_light_mesh() -> Mesh {
     }
 
     for i in 1..=SIDES as u32 {
-        indices.extend_from_slice(&[0, i , i + 1]);
+        indices.extend_from_slice(&[0, i, i + 1]);
     }
     indices.extend_from_slice(&[0, SIDES as u32, 1]);
 

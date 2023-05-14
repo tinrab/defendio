@@ -1,18 +1,32 @@
+use crate::lighting::light_mesh::ATTRIBUTE_INTENSITY;
+use crate::lighting::{LightComponent, LightInstanceData, LightMeshComponent};
 use bevy::core_pipeline::core_3d::Transparent3d;
-use bevy::ecs::query::ROQueryItem;
+use bevy::ecs::query::{QueryItem, ROQueryItem};
 use bevy::ecs::system::lifetimeless::{Read, SRes};
 use bevy::ecs::system::SystemParamItem;
-use bevy::pbr::{MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup, SetMeshViewBindGroup};
+use bevy::pbr::{
+    MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup, SetMeshViewBindGroup,
+};
 use bevy::prelude::*;
+use bevy::render::extract_component::ExtractComponent;
 use bevy::render::mesh::{GpuBufferInfo, MeshVertexBufferLayout};
 use bevy::render::render_asset::RenderAssets;
-use bevy::render::render_phase::{DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase, SetItemPipeline, TrackedRenderPass};
-use bevy::render::render_resource::{Buffer, BufferInitDescriptor, BufferUsages, PipelineCache, RenderPipelineDescriptor, SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines, SpecializedRenderPipeline, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
+use bevy::render::render_phase::{
+    DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase, SetItemPipeline,
+    TrackedRenderPass,
+};
+use bevy::render::render_resource::{
+    Buffer, BufferInitDescriptor, BufferUsages, PipelineCache, RenderPipelineDescriptor,
+    SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
+    SpecializedRenderPipeline, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode,
+};
 use bevy::render::renderer::RenderDevice;
 use bevy::render::view::ExtractedView;
-use bevy::sprite::{Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, SetMesh2dBindGroup, SetMesh2dViewBindGroup};
-use crate::lighting::light_material::{LightInstanceData, InstanceMaterialData};
-use crate::lighting::light_mesh::ATTRIBUTE_INTENSITY;
+use bevy::sprite::{
+    Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, SetMesh2dBindGroup, SetMesh2dViewBindGroup,
+};
+use bytemuck::{Pod, Zeroable};
+use itertools::Itertools;
 
 #[derive(Resource)]
 pub struct LightingPipeline {
@@ -28,6 +42,39 @@ pub type DrawLighting = (
 );
 
 pub struct DrawMeshInstanced;
+
+#[derive(Component)]
+pub struct ExtractedLight {
+    instances: Vec<LightInstanceBin>,
+}
+
+#[derive(Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
+struct LightInstanceBin {
+    pub position: Vec3,
+    pub scale: f32,
+    pub color: [f32; 4],
+}
+
+impl ExtractComponent for ExtractedLight {
+    type Query = &'static LightComponent;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
+        Some(ExtractedLight {
+            instances: item
+                .instances
+                .iter()
+                .map(|light| LightInstanceBin {
+                    position: light.position,
+                    scale: light.scale,
+                    color: light.color.as_rgba_f32(),
+                })
+                .collect(),
+        })
+    }
+}
 
 impl FromWorld for LightingPipeline {
     fn from_world(world: &mut World) -> Self {
@@ -53,14 +100,12 @@ impl SpecializedMeshPipeline for LightingPipeline {
     ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
         let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
         descriptor.vertex.shader = self.shader.clone();
-        descriptor.vertex.buffers = vec![
-            layout.get_layout(&[
-                Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-                ATTRIBUTE_INTENSITY.at_shader_location(1),
-            ])?
-        ];
+        descriptor.vertex.buffers = vec![layout.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            ATTRIBUTE_INTENSITY.at_shader_location(1),
+        ])?];
         descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: std::mem::size_of::<LightInstanceData>() as u64,
+            array_stride: std::mem::size_of::<LightInstanceBin>() as u64,
             step_mode: VertexStepMode::Instance,
             attributes: vec![
                 // position and scale
@@ -129,18 +174,23 @@ pub struct InstanceBuffer {
 
 pub fn prepare_instance_buffers(
     mut commands: Commands,
-    query: Query<(Entity, &InstanceMaterialData)>,
+    mesh_query: Query<Entity, With<LightMeshComponent>>,
+    light_query: Query<&ExtractedLight>,
     render_device: Res<RenderDevice>,
 ) {
-    for (entity, instance_data) in &query {
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some("instance data buffer"),
-            contents: bytemuck::cast_slice(instance_data.as_slice()),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
-        });
-        commands.entity(entity).insert(InstanceBuffer {
-            buffer,
-            length: instance_data.len(),
-        });
-    }
+    let entity = mesh_query.single();
+    let lights = light_query
+        .iter()
+        .flat_map(|light| light.instances.iter().cloned())
+        .collect_vec();
+
+    let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+        label: Some("instance data buffer"),
+        contents: bytemuck::cast_slice(lights.as_slice()),
+        usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+    });
+    commands.entity(entity).insert(InstanceBuffer {
+        buffer,
+        length: lights.len(),
+    });
 }

@@ -1,9 +1,9 @@
+use crate::asset::{CoreAssetSet, ShaderAssetSet};
+use crate::state::AppState;
 use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy::render::render_resource::ShaderRef;
 use bevy::render::texture::ImageSampler;
-use crate::asset::{CoreAssetSet, ShaderAssetSet};
-use crate::state::AppState;
 
 #[derive(Resource, Default)]
 pub struct AssetLoadState {
@@ -18,7 +18,14 @@ pub fn on_load_enter(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let tiles_image: Handle<Image> = asset_server.load("graphics/tiles.png");
-    let tiles_atlas: Handle<TextureAtlas> = texture_atlases.add(TextureAtlas::from_grid(tiles_image.clone(), Vec2::new(8.0f32,8.0f32),8,8,None,None));
+    let tiles_atlas: Handle<TextureAtlas> = texture_atlases.add(TextureAtlas::from_grid(
+        tiles_image.clone(),
+        Vec2::new(8.0f32, 8.0f32),
+        8,
+        8,
+        None,
+        None,
+    ));
     let tilemap_shader: Handle<Shader> = asset_server.load("shaders/tilemap.wgsl");
     let light_shader: Handle<Shader> = asset_server.load("shaders/light.wgsl");
 
@@ -31,12 +38,8 @@ pub fn on_load_enter(
         ],
         loaded_handles: Default::default(),
     });
-    commands.insert_resource(CoreAssetSet {
-        tiles_atlas,
-    });
-    commands.insert_resource(ShaderAssetSet {
-        tilemap_shader,
-    });
+    commands.insert_resource(CoreAssetSet { tiles_atlas });
+    commands.insert_resource(ShaderAssetSet { tilemap_shader });
 }
 
 pub fn on_load_exit() {}
@@ -77,5 +80,9 @@ pub fn on_load_update(
         }
     }
 
-    println!("{}", asset_load_state.loaded_handles.len() as f32 / (asset_load_state.loaded_handles.len() + asset_load_state.handles.len()) as f32);
+    println!(
+        "{}",
+        asset_load_state.loaded_handles.len() as f32
+            / (asset_load_state.loaded_handles.len() + asset_load_state.handles.len()) as f32
+    );
 }

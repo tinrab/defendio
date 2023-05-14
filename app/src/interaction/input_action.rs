@@ -41,9 +41,8 @@ impl InputActionPlugin {
 }
 
 fn spawn_input_manager(mut commands: Commands) {
-    commands
-        .spawn(InputManagerBundle::<InputAction> {
-            action_state: ActionState::default(),
-            input_map: InputActionPlugin::default_input_map(),
-        });
+    commands.spawn(InputManagerBundle::<InputAction> {
+        action_state: ActionState::default(),
+        input_map: InputActionPlugin::default_input_map(),
+    });
 }

@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
-use bevy::prelude::*;
 use crate::tilemap::TILEMAP_CHUNK_SIZE;
 use array_init::array_init;
+use bevy::prelude::*;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct TilemapData {
@@ -21,7 +21,9 @@ pub struct TileData {
 
 impl TilemapData {
     pub fn new() -> Self {
-        TilemapData { chunks: Default::default() }
+        TilemapData {
+            chunks: Default::default(),
+        }
     }
 
     pub fn get_chunk(&self, location: IVec2) -> Option<&ChunkData> {
@@ -30,9 +32,12 @@ impl TilemapData {
 
     pub fn set_tile(&mut self, location: IVec2, tile: TileData) {
         let chunk_location = Self::tilemap_to_chunk(location);
-        let chunk = self.chunks.entry(chunk_location.x)
+        let chunk = self
+            .chunks
+            .entry(chunk_location.x)
             .or_default()
-            .entry(chunk_location.y).or_insert_with(|| ChunkData::new());
+            .entry(chunk_location.y)
+            .or_insert_with(|| ChunkData::new());
         chunk.set_tile(ChunkData::tilemap_to_chunk_tile(location), tile);
     }
 
@@ -57,15 +62,17 @@ impl TilemapData {
 
 impl ChunkData {
     pub fn new() -> Self {
-        ChunkData { tiles: array_init(|_| TileData::default()) }
+        ChunkData {
+            tiles: array_init(|_| TileData::default()),
+        }
     }
 
-    pub fn get_tile(& self, location: UVec2) -> &TileData {
+    pub fn get_tile(&self, location: UVec2) -> &TileData {
         self.get_tile_at(location.x, location.y)
     }
 
-    pub fn get_tile_at(& self, x: u32, y: u32) -> &TileData {
-        &self.tiles[Self::tile_index_at(x, y) ]
+    pub fn get_tile_at(&self, x: u32, y: u32) -> &TileData {
+        &self.tiles[Self::tile_index_at(x, y)]
     }
 
     pub fn set_tile(&mut self, location: UVec2, tile: TileData) {
@@ -87,7 +94,18 @@ impl ChunkData {
     pub fn tilemap_to_chunk_tile(location: IVec2) -> UVec2 {
         let x = location.x % TILEMAP_CHUNK_SIZE as i32;
         let y = location.y % TILEMAP_CHUNK_SIZE as i32;
-        UVec2::new(if x < 0 { (TILEMAP_CHUNK_SIZE as i32 + x) as u32 } else { x as u32 }, if y < 0 { (TILEMAP_CHUNK_SIZE as i32 + y) as u32 } else { y as u32 })
+        UVec2::new(
+            if x < 0 {
+                (TILEMAP_CHUNK_SIZE as i32 + x) as u32
+            } else {
+                x as u32
+            },
+            if y < 0 {
+                (TILEMAP_CHUNK_SIZE as i32 + y) as u32
+            } else {
+                y as u32
+            },
+        )
     }
 }
 
@@ -102,17 +120,26 @@ impl TileData {
 
 #[cfg(test)]
 mod tests {
-    use crate::tilemap::generator::random::RandomTilemapGenerator;
     use super::*;
+    use crate::tilemap::generator::random::RandomTilemapGenerator;
 
     #[test]
     fn basic() {
-        println!("size: {}", std::mem::size_of_val(&RandomTilemapGenerator::generate()));
+        println!(
+            "size: {}",
+            std::mem::size_of_val(&RandomTilemapGenerator::generate())
+        );
     }
 
     #[test]
     fn locations() {
-        assert_eq!(ChunkData::tilemap_to_chunk_tile(IVec2::new(40, 45)), UVec2::new(8, 13));
-        assert_eq!(ChunkData::tilemap_to_chunk_tile(IVec2::new(-1, -5)), UVec2::new(31, 27));
+        assert_eq!(
+            ChunkData::tilemap_to_chunk_tile(IVec2::new(40, 45)),
+            UVec2::new(8, 13)
+        );
+        assert_eq!(
+            ChunkData::tilemap_to_chunk_tile(IVec2::new(-1, -5)),
+            UVec2::new(31, 27)
+        );
     }
 }

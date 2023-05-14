@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::interaction::input_action::InputActionPlugin;
+use bevy::prelude::*;
 
 pub mod input_action;
 
@@ -10,9 +10,8 @@ pub struct MousePosition(pub Vec2);
 
 impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<MousePosition>()
-            .add_plugin(InputActionPlugin{})
+        app.init_resource::<MousePosition>()
+            .add_plugin(InputActionPlugin {})
             .add_system(update_mouse_position);
     }
 }

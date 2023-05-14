@@ -35,23 +35,28 @@ impl AppConfig {
 
         // Initial "default" configuration file
         let default_path = Path::new("config").join("default");
-        config_builder = config_builder.add_source(File::with_name(default_path.to_str().unwrap()).required(false));
+        config_builder = config_builder
+            .add_source(File::with_name(default_path.to_str().unwrap()).required(false));
 
         // Add in a local configuration file
         // This file shouldn't be checked in to git
         let local_path = Path::new("config").join("local");
-        config_builder =
-            config_builder.add_source(File::with_name(local_path.to_str().unwrap()).required(false));
+        config_builder = config_builder
+            .add_source(File::with_name(local_path.to_str().unwrap()).required(false));
 
         // Add override settings file.
         if let Some(override_path) = env::var(CONFIG_PATH_ENV).ok() {
-            config_builder = config_builder.add_source(File::with_name(&override_path).required(false));
+            config_builder =
+                config_builder.add_source(File::with_name(&override_path).required(false));
         }
 
         // Add in settings from the environment (with a prefix of APP)
         config_builder =
             config_builder.add_source(Environment::with_prefix(ENV_PREFIX).separator("__"));
 
-        config_builder.build()?.try_deserialize().map_err(Into::into)
+        config_builder
+            .build()?
+            .try_deserialize()
+            .map_err(Into::into)
     }
 }

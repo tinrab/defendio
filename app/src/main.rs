@@ -6,7 +6,10 @@ use defendio_app::config::AppConfig;
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let config = AppConfig::load()?;
-    println!("{} {}", config.distribution.name, config.distribution.version);
+    println!(
+        "{} {}",
+        config.distribution.name, config.distribution.version
+    );
 
     App::new()
         .add_plugins(DefaultPlugins)
