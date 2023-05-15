@@ -5,6 +5,7 @@ use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
+use bevy::render::view::RenderLayers;
 use leafwing_input_manager::prelude::*;
 
 pub struct MainCameraPlugin {}
@@ -25,7 +26,7 @@ pub struct MainCameraComponent {
 pub struct MainCameraBundle {
     camera: MainCameraComponent,
     #[bundle]
-    camera2d: Camera2dBundle,
+    pub camera2d: Camera2dBundle,
 }
 
 const CAMERA_BASE_SPEED: f32 = 50.0f32;

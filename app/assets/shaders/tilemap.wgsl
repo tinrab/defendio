@@ -2,16 +2,12 @@
 #import bevy_core_pipeline::tonemapping
 #endif
 
-struct TilemapMaterial {
-    color: vec4<f32>,
-};
-
 @group(1) @binding(0)
-var<uniform> material: TilemapMaterial;
-@group(1) @binding(1)
 var color_texture: texture_2d<f32>;
-@group(1) @binding(2)
+@group(1) @binding(1)
 var color_sampler: sampler;
+@group(1) @binding(2)
+var lighting_texture: texture_2d<f32>;
 
 struct FragmentInput {
     #import bevy_sprite::mesh2d_vertex_output

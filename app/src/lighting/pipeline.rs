@@ -1,5 +1,5 @@
 use crate::lighting::light_mesh::ATTRIBUTE_INTENSITY;
-use crate::lighting::{LightComponent, LightInstanceData, LightMeshComponent};
+use crate::lighting::{LightComponent, LightingComponent};
 use bevy::core_pipeline::core_3d::Transparent3d;
 use bevy::ecs::query::{QueryItem, ROQueryItem};
 use bevy::ecs::system::lifetimeless::{Read, SRes};
@@ -45,7 +45,7 @@ pub struct DrawMeshInstanced;
 
 #[derive(Component)]
 pub struct ExtractedLight {
-    instances: Vec<LightInstanceBin>,
+    instance: LightInstanceBin,
 }
 
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -56,23 +56,32 @@ struct LightInstanceBin {
     pub color: [f32; 4],
 }
 
+#[derive(Component)]
+pub struct ExtractedLighting;
+
 impl ExtractComponent for ExtractedLight {
-    type Query = &'static LightComponent;
+    type Query = (&'static LightComponent, &'static Transform);
     type Filter = ();
     type Out = Self;
 
-    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
+    fn extract_component((light, transform): QueryItem<'_, Self::Query>) -> Option<Self> {
         Some(ExtractedLight {
-            instances: item
-                .instances
-                .iter()
-                .map(|light| LightInstanceBin {
-                    position: light.position,
-                    scale: light.scale,
-                    color: light.color.as_rgba_f32(),
-                })
-                .collect(),
+            instance: LightInstanceBin {
+                position: transform.translation,
+                scale: light.scale,
+                color: light.color.as_rgba_f32(),
+            }
         })
+    }
+}
+
+impl ExtractComponent for ExtractedLighting {
+    type Query = &'static LightingComponent;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(_item: QueryItem<'_, Self::Query>) -> Option<Self> {
+        Some(ExtractedLighting {})
     }
 }
 
@@ -174,14 +183,14 @@ pub struct InstanceBuffer {
 
 pub fn prepare_instance_buffers(
     mut commands: Commands,
-    mesh_query: Query<Entity, With<LightMeshComponent>>,
+    mesh_query: Query<Entity, With<ExtractedLighting>>,
     light_query: Query<&ExtractedLight>,
     render_device: Res<RenderDevice>,
 ) {
     let entity = mesh_query.single();
     let lights = light_query
         .iter()
-        .flat_map(|light| light.instances.iter().cloned())
+        .map(|light| light.instance)
         .collect_vec();
 
     let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {

@@ -12,29 +12,15 @@ use bevy::{
 #[derive(AsBindGroup, TypeUuid, Debug, Clone)]
 #[uuid = "4284d12f-56dc-49f5-9cc1-68e9d14a7ebc"]
 pub struct TilemapMaterial {
-    // #[uniform(0)]
-    // color: Color,
-    #[texture(1)]
-    #[sampler(2)]
-    pub texture: Handle<Image>,
+    #[texture(0)]
+    #[sampler(1)]
+    pub color_texture: Handle<Image>,
+    #[texture(2)]
+    pub lighting_texture: Handle<Image>,
 }
 
 impl Material2d for TilemapMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/tilemap.wgsl".into()
-    }
-
-    fn specialize(
-        descriptor: &mut RenderPipelineDescriptor,
-        layout: &MeshVertexBufferLayout,
-        key: Material2dKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        // dbg!(&descriptor.vertex.buffers);
-        // let vertex_buffer_layout = layout.get_layout(&[
-        //     Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-        //     Mesh::ATTRIBUTE_COLOR.at_shader_location(1),
-        // ])?;
-
-        Ok(())
     }
 }
