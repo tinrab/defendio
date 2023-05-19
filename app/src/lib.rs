@@ -1,10 +1,10 @@
+pub mod asset;
 pub mod camera;
 pub mod config;
 pub mod error;
 pub mod interaction;
 pub mod lighting;
-// pub mod constants;
-pub mod asset;
+pub mod plugin;
 pub mod prototype;
 pub mod state;
 pub mod tilemap;

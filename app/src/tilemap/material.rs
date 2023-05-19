@@ -16,10 +16,15 @@ pub struct TilemapMaterial {
     #[sampler(1)]
     pub color_texture: Handle<Image>,
     #[texture(2)]
-    pub lighting_texture: Handle<Image>,
+    #[sampler(3)]
+    pub lighting_texture: Option<Handle<Image>>,
 }
 
 impl Material2d for TilemapMaterial {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/tilemap.wgsl".into()
+    }
+
     fn fragment_shader() -> ShaderRef {
         "shaders/tilemap.wgsl".into()
     }

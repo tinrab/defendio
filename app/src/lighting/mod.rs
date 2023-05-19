@@ -1,5 +1,9 @@
+use crate::lighting::camera::{light_camera_update, LightCameraBundle};
 use crate::lighting::light_mesh::make_light_mesh;
-use crate::lighting::pipeline::{prepare_instance_buffers, DrawLighting, ExtractedLight, LightingPipeline, ExtractedLighting};
+use crate::lighting::pipeline::{
+    prepare_instance_buffers, DrawLighting, ExtractedLight, ExtractedLighting, LightingPipeline,
+};
+use crate::tilemap::material::TilemapMaterial;
 use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::core_pipeline::core_3d::Transparent3d;
 use bevy::ecs::query::QueryItem;
@@ -23,16 +27,17 @@ use bevy::render::render_resource::{
     VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode,
 };
 use bevy::render::renderer::RenderDevice;
-use bevy::render::view::{ExtractedView, NoFrustumCulling, RenderLayers};
+use bevy::render::view::{ExtractedView, NoFrustumCulling, RenderLayers, VisibleEntities};
 use bevy::render::{RenderApp, RenderSet};
-use bevy::sprite::{DrawMesh2d, Mesh2dHandle, Mesh2dPipelineKey, Mesh2dUniform};
+use bevy::sprite::{
+    DrawMesh2d, Material2d, MaterialMesh2dBundle, Mesh2dHandle, Mesh2dPipelineKey, Mesh2dUniform,
+};
 use bevy::utils::FloatOrd;
 use bevy::window::WindowResized;
-use crate::lighting::camera::{light_camera_update, LightCameraBundle};
 
+mod camera;
 mod light_mesh;
 mod pipeline;
-mod camera;
 
 pub struct LightingPlugin;
 
@@ -42,7 +47,9 @@ impl Plugin for LightingPlugin {
             .add_plugin(ExtractComponentPlugin::<ExtractedLighting>::default())
             .add_startup_system(init_lighting)
             .add_system(window_resize_system)
-            .add_system(light_camera_update);
+            .add_system(light_camera_update)
+            .add_system(lighting_update_system)
+            .add_system(material_update_system);
         app.sub_app_mut(RenderApp)
             .add_render_command::<Transparent2d, DrawLighting>()
             .init_resource::<LightingPipeline>()
@@ -58,9 +65,9 @@ pub struct LightComponent {
     pub color: Color,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Debug)]
 pub struct LightingComponent {
-    map_image: Handle<Image>,
+    pub map_image: Handle<Image>,
 }
 
 #[derive(Bundle)]
@@ -69,15 +76,12 @@ pub struct LightBundle {
     transform: Transform,
 }
 
-const LIGHT_RENDER_LAYER: RenderLayers = RenderLayers::layer(0);
+const LIGHT_RENDER_LAYER: RenderLayers = RenderLayers::layer(1);
 
 impl LightBundle {
     pub fn new(position: Vec3, scale: f32, color: Color) -> Self {
         LightBundle {
-            light: LightComponent {
-                scale,
-                color,
-            },
+            light: LightComponent { scale, color },
             transform: Transform::from_translation(position),
         }
     }
@@ -87,18 +91,28 @@ fn init_lighting(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
+    window: Query<&Window>,
 ) {
-    let size = Extent3d {
-        width: 512,
-        height: 512,
-        ..Default::default()
+    let size = if let Ok(window) = window.get_single() {
+        Extent3d {
+            width: window.width() as u32,
+            height: window.height() as u32,
+            ..Default::default()
+        }
+    } else {
+        Extent3d {
+            width: 1024,
+            height: 1024,
+            ..Default::default()
+        }
     };
     let mut map_image = Image {
         texture_descriptor: TextureDescriptor {
             label: None,
             size,
             dimension: TextureDimension::D2,
-            format: TextureFormat::Bgra8UnormSrgb,
+            // format: TextureFormat::Bgra8UnormSrgb,
+            format: TextureFormat::Rg11b10Float,
             mip_level_count: 1,
             sample_count: 1,
             usage: TextureUsages::TEXTURE_BINDING
@@ -108,19 +122,19 @@ fn init_lighting(
         },
         ..Default::default()
     };
-    // Fill with zeroes
-    map_image.resize(size);
     let map_image_handle = images.add(map_image);
 
     commands.spawn((
         Mesh2dHandle::from(meshes.add(make_light_mesh())),
         SpatialBundle::INHERITED_IDENTITY,
-        LightingComponent { map_image: map_image_handle.clone() },
+        LightingComponent {
+            map_image: map_image_handle.clone(),
+        },
         NoFrustumCulling,
         LIGHT_RENDER_LAYER,
     ));
     commands.spawn((
-        LightCameraBundle::new(map_image_handle),
+        LightCameraBundle::new(map_image_handle.clone()),
         LIGHT_RENDER_LAYER,
     ));
 }
@@ -128,14 +142,67 @@ fn init_lighting(
 fn window_resize_system(
     mut window_resized_events: EventReader<WindowResized>,
     lighting_query: Query<&LightingComponent>,
-    images: Res<Assets<Image>>,
-    // asset_server: Res<AssetServer>,
+    mut images: ResMut<Assets<Image>>,
 ) {
-    // for event in window_resized_events.iter() {
-    //     let map_image = map_image_query.single();
-    //
-    //     println!("width = {} height = {}", event.width, event.height);
-    // }
+    for event in window_resized_events.iter() {
+        let map_image_handle = if let Ok(lighting) = lighting_query.get_single() {
+            &lighting.map_image
+        } else {
+            return;
+        };
+        let map_image = images.get_mut(map_image_handle).unwrap();
+
+        if event.width < 2.0 || event.height < 2.0 {
+            break;
+        }
+        map_image.resize(Extent3d {
+            width: event.width as u32,
+            height: event.height as u32,
+            ..Default::default()
+        });
+    }
+}
+
+fn lighting_update_system(
+    lighting_query: Query<
+        &LightingComponent,
+        Or<(Added<LightingComponent>, Changed<LightingComponent>)>,
+    >,
+    mut tilemap_materials: ResMut<Assets<TilemapMaterial>>,
+) {
+    let map_image = if let Ok(lighting) = lighting_query.get_single() {
+        &lighting.map_image
+    } else {
+        return;
+    };
+
+    for (_, material) in tilemap_materials.iter_mut() {
+        material.lighting_texture = Some(map_image.clone());
+        dbg!(&map_image);
+    }
+}
+
+fn material_update_system(
+    lighting_query: Query<&LightingComponent>,
+    mut tilemap_material_event_reader: EventReader<AssetEvent<TilemapMaterial>>,
+    mut tilemap_materials: ResMut<Assets<TilemapMaterial>>,
+) {
+    let map_image = if let Ok(lighting) = lighting_query.get_single() {
+        &lighting.map_image
+    } else {
+        return;
+    };
+
+    for event in tilemap_material_event_reader.iter() {
+        let handle = match event {
+            AssetEvent::Created { handle } => handle,
+            AssetEvent::Modified { handle } => handle,
+            _ => continue,
+        };
+        if let Some(material) = tilemap_materials.get_mut(handle) {
+            material.lighting_texture = Some(map_image.clone());
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -146,8 +213,12 @@ fn queue_lighting_mesh(
     pipeline_cache: Res<PipelineCache>,
     msaa: Res<Msaa>,
     meshes: Res<RenderAssets<Mesh>>,
-    material_meshes: Query<(Entity, &Mesh2dUniform, &Mesh2dHandle), With<LightingComponent>>,
-    mut views: Query<(&ExtractedView, &mut RenderPhase<Transparent2d>)>,
+    material_meshes: Query<(&Mesh2dUniform, &Mesh2dHandle), With<ExtractedLighting>>,
+    mut views: Query<(
+        &ExtractedView,
+        &VisibleEntities,
+        &mut RenderPhase<Transparent2d>,
+    )>,
 ) {
     if material_meshes.is_empty() {
         return;
@@ -157,23 +228,25 @@ fn queue_lighting_mesh(
 
     let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples());
 
-    for (view, mut transparent_phase) in &mut views {
+    for (view, visible_entities, mut transparent_phase) in &mut views {
         let view_key = msaa_key | Mesh2dPipelineKey::from_hdr(view.hdr);
-        for (entity, mesh_uniform, mesh_handle) in &material_meshes {
-            if let Some(mesh) = meshes.get(&mesh_handle.0) {
-                let key =
-                    view_key | Mesh2dPipelineKey::from_primitive_topology(mesh.primitive_topology);
-                let pipeline = pipelines
-                    .specialize(&pipeline_cache, &lighting_pipeline, key, &mesh.layout)
-                    .unwrap();
-                let mesh_z = mesh_uniform.transform.w_axis.z;
-                transparent_phase.add(Transparent2d {
-                    sort_key: FloatOrd(mesh_z),
-                    entity,
-                    pipeline,
-                    draw_function: draw_lighting,
-                    batch_range: None,
-                });
+        for visible_entity in visible_entities.entities.iter() {
+            if let Ok((mesh_uniform, mesh_handle)) = material_meshes.get(*visible_entity) {
+                if let Some(mesh) = meshes.get(&mesh_handle.0) {
+                    let key = view_key
+                        | Mesh2dPipelineKey::from_primitive_topology(mesh.primitive_topology);
+                    let pipeline = pipelines
+                        .specialize(&pipeline_cache, &lighting_pipeline, key, &mesh.layout)
+                        .unwrap();
+                    let mesh_z = mesh_uniform.transform.w_axis.z;
+                    transparent_phase.add(Transparent2d {
+                        sort_key: FloatOrd(mesh_z),
+                        entity: *visible_entity,
+                        pipeline,
+                        draw_function: draw_lighting,
+                        batch_range: None,
+                    });
+                }
             }
         }
     }

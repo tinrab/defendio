@@ -3,17 +3,22 @@ use std::error::Error;
 use bevy::prelude::*;
 use bevy::render::render_resource::{FilterMode, SamplerDescriptor};
 use bevy::render::texture::ImageSampler;
+use bevy::render::view::RenderLayers;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy::window::WindowResolution;
-use defendio_app::asset::CoreAssetSet;
-use defendio_app::camera::{MainCameraBundle, MainCameraPlugin};
+use defendio_app::asset::TilemapAssetGroup;
+use defendio_app::camera::{MainCameraBundle, MainCameraComponent, MainCameraPlugin};
 use defendio_app::interaction::input_action::InputActionPlugin;
-use defendio_app::interaction::InteractionPlugin;
+use defendio_app::interaction::{InteractionPlugin, MousePosition};
 use defendio_app::lighting::{LightBundle, LightingPlugin};
-use defendio_app::state::{AppState, AppStatePlugin};
+use defendio_app::plugin::AppCorePlugin;
+use defendio_app::state::AppState;
+use defendio_app::tilemap::bundle::TilemapBundle;
 use defendio_app::tilemap::material::TilemapMaterial;
 use defendio_app::tilemap::plugin::TilemapPlugin;
-use defendio_app::tilemap::TilemapBundle;
+
+#[derive(Component)]
+struct LightMovement {}
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     App::new()
@@ -33,13 +38,10 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                 }),
         )
         .add_system(bevy::window::close_on_esc)
-        .add_plugin(AppStatePlugin {})
-        .add_plugin(InteractionPlugin {})
-        .add_plugin(MainCameraPlugin {})
-        .add_plugin(LightingPlugin {})
-        .add_plugin(TilemapPlugin {})
+        .add_plugin(AppCorePlugin)
         .add_system(on_game_state_enter.in_schedule(OnEnter(AppState::Game)))
         .add_system(on_game_state_update.in_set(OnUpdate(AppState::Game)))
+        .add_system(move_light.in_set(OnUpdate(AppState::Game)))
         .run();
     Ok(())
 }
@@ -50,7 +52,7 @@ fn on_game_state_enter(
     mut materials: ResMut<Assets<TilemapMaterial>>,
     mut color_materials: ResMut<Assets<ColorMaterial>>,
     images: Res<Assets<Image>>,
-    core_asset_set: Res<CoreAssetSet>,
+    tilemap_asset_group: Res<TilemapAssetGroup>,
     texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
     // commands.spawn(MaterialMesh2dBundle {
@@ -59,41 +61,50 @@ fn on_game_state_enter(
     //     transform: Transform::from_translation(Vec3::new(-0.5, 0., 0.1)),
     //     ..default()
     // });
-    commands.spawn(TilemapBundle::build(
-        meshes.as_mut(),
+    commands.spawn(TilemapBundle::make(
+        tilemap_asset_group,
         materials,
+        meshes.as_mut(),
         images,
-        core_asset_set,
         texture_atlases,
     ));
 
-    // commands.spawn((
-    //     MaterialMesh2dBundle {
-    //         mesh: meshes.add(make_light_mesh()).into(),
-    //         material: color_materials.add(ColorMaterial::from(Color::RED)),
-    //         transform: Transform::from_translation(Vec3::new(0.0,0.0,1.0)),
-    //         ..Default::default()
-    //     }
-    // ));
-    for _ in 0..100 {
+    for _ in 0..10 {
         commands.spawn(LightBundle::new(
             Vec3::new(
-                rand::random::<f32>() * 70.0,
-                rand::random::<f32>() * 70.0,
-                2.0,
+                rand::random::<f32>() * 50.0,
+                rand::random::<f32>() * 50.0,
+                0.0,
             ),
-            rand::random::<f32>() * 10.0 + 2.0,
-            Color::hsl(rand::random::<f32>() * 360.0, 0.9, 0.6),
+            rand::random::<f32>() * 20.0 + 5.0,
+            Color::hsl(rand::random::<f32>() * 360.0, 0.6, 0.8),
         ));
     }
+
+    commands.spawn((
+        LightBundle::new(Vec3::new(5.0, 0.0, 0.0), 10.0, Color::WHITE * 10.0),
+        LightMovement {},
+    ));
 }
 
 fn on_game_state_update() {}
 
-// fn update_images_system(
-//     mut images: ResMut<Assets<Image>>,
-//     image_resource_set: Res<ImageResourceSet>,
-// ) {
-//     // let image = images.get_mut(&image_resource_set.tiles_texture).unwrap();
-//     // image.sampler_descriptor = ImageSampler::nearest();
-// }
+fn move_light(
+    camera_query: Query<(&Camera, &GlobalTransform), With<MainCameraComponent>>,
+    mut light_query: Query<(&mut Transform, &LightMovement)>,
+    mouse_position: Res<MousePosition>,
+) {
+    let mut light = if let Ok((t, _)) = light_query.get_single_mut() {
+        t
+    } else {
+        return;
+    };
+
+    let (camera, camera_transform) = camera_query.single();
+    if let Some(world_position) = camera
+        .viewport_to_world(camera_transform, mouse_position.0)
+        .map(|ray| ray.origin.truncate())
+    {
+        light.translation = world_position.extend(0.0);
+    }
+}

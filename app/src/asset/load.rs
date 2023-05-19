@@ -1,9 +1,10 @@
-use crate::asset::{CoreAssetSet, ShaderAssetSet};
+use crate::asset::TilemapAssetGroup;
 use crate::state::AppState;
 use bevy::asset::LoadState;
 use bevy::prelude::*;
-use bevy::render::render_resource::ShaderRef;
 use bevy::render::texture::ImageSampler;
+
+pub struct AssetLoadPlugin;
 
 #[derive(Resource, Default)]
 pub struct AssetLoadState {
@@ -12,7 +13,14 @@ pub struct AssetLoadState {
     pub loaded_handles: Vec<HandleUntyped>,
 }
 
-pub fn on_load_enter(
+impl Plugin for AssetLoadPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system(on_load_enter.in_schedule(OnEnter(AppState::Load)))
+            .add_system(on_load_update.in_set(OnUpdate(AppState::Load)));
+    }
+}
+
+fn on_load_enter(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
@@ -26,6 +34,7 @@ pub fn on_load_enter(
         None,
         None,
     ));
+
     let tilemap_shader: Handle<Shader> = asset_server.load("shaders/tilemap.wgsl");
     let light_shader: Handle<Shader> = asset_server.load("shaders/light.wgsl");
 
@@ -38,13 +47,13 @@ pub fn on_load_enter(
         ],
         loaded_handles: Default::default(),
     });
-    commands.insert_resource(CoreAssetSet { tiles_atlas });
-    commands.insert_resource(ShaderAssetSet { tilemap_shader });
+    commands.insert_resource(TilemapAssetGroup {
+        texture_atlas: tiles_atlas,
+        shader: tilemap_shader,
+    });
 }
 
-pub fn on_load_exit() {}
-
-pub fn on_load_update(
+fn on_load_update(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
     time: Res<Time>,

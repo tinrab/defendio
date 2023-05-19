@@ -70,7 +70,7 @@ impl ExtractComponent for ExtractedLight {
                 position: transform.translation,
                 scale: light.scale,
                 color: light.color.as_rgba_f32(),
-            }
+            },
         })
     }
 }
@@ -188,10 +188,7 @@ pub fn prepare_instance_buffers(
     render_device: Res<RenderDevice>,
 ) {
     let entity = mesh_query.single();
-    let lights = light_query
-        .iter()
-        .map(|light| light.instance)
-        .collect_vec();
+    let lights = light_query.iter().map(|light| light.instance).collect_vec();
 
     let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
         label: Some("instance data buffer"),

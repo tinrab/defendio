@@ -8,7 +8,7 @@ use bevy::render::camera::ScalingMode;
 use bevy::render::view::RenderLayers;
 use leafwing_input_manager::prelude::*;
 
-pub struct MainCameraPlugin {}
+pub struct MainCameraPlugin;
 
 impl Plugin for MainCameraPlugin {
     fn build(&self, app: &mut App) {
@@ -50,7 +50,8 @@ impl MainCameraBundle {
                     scaling_mode: ScalingMode::WindowSize(32.0),
                     ..Default::default()
                 },
-                tonemapping: Tonemapping::TonyMcMapface,
+                // tonemapping: Tonemapping::TonyMcMapface,
+                tonemapping: Tonemapping::None,
                 ..Default::default()
             },
         }
@@ -58,7 +59,8 @@ impl MainCameraBundle {
 }
 
 fn on_game_state_enter(mut commands: Commands) {
-    commands.spawn((MainCameraBundle::new(), BloomSettings::OLD_SCHOOL));
+    // commands.spawn((MainCameraBundle::new(), BloomSettings::OLD_SCHOOL));
+    commands.spawn(MainCameraBundle::new());
 }
 
 fn move_camera(

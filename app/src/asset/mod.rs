@@ -1,12 +1,9 @@
 use bevy::prelude::*;
 
-#[derive(Resource, Default)]
-pub struct CoreAssetSet {
-    // pub tiles_image: Handle<Image>,
-    pub tiles_atlas: Handle<TextureAtlas>,
-}
+pub mod load;
 
 #[derive(Resource, Default)]
-pub struct ShaderAssetSet {
-    pub tilemap_shader: Handle<Shader>,
+pub struct TilemapAssetGroup {
+    pub texture_atlas: Handle<TextureAtlas>,
+    pub shader: Handle<Shader>,
 }

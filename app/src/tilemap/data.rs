@@ -46,8 +46,6 @@ impl TilemapData {
     }
 
     pub fn get_chunk_rect(&self) -> Rect {
-        // let mut min = Vec2::new(f32::INFINITY,f32::INFINITY);
-        // let mut max = Vec2::new(f32::NEG_INFINITY,f32::NEG_INFINITY);
         let mut min = Vec2::ZERO;
         let mut max = Vec2::ZERO;
         for (x, columns) in self.chunks.iter() {

@@ -1,9 +1,9 @@
+use crate::camera::{MainCameraBundle, MainCameraComponent};
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
 use bevy::render::camera::{CameraOutputMode, RenderTarget};
 use bevy::render::render_resource::BlendState;
 use bevy::render::view::RenderLayers;
-use crate::camera::{MainCameraBundle, MainCameraComponent};
 
 #[derive(Component)]
 pub struct LightCameraComponent;
@@ -29,7 +29,7 @@ impl LightCameraBundle {
                     ..Default::default()
                 },
                 camera_2d: Camera2d {
-                    clear_color: ClearColorConfig::Custom(Color::RED),
+                    clear_color: ClearColorConfig::Custom(Color::rgb(0.4, 0.4, 0.4)),
                 },
                 ..main_camera.camera2d
             },
@@ -38,10 +38,12 @@ impl LightCameraBundle {
     }
 }
 
-
 pub fn light_camera_update(
     mut light_camera_query: Query<(&mut Transform, &LightCameraComponent)>,
-    mut main_camera_query: Query<&Transform, (With<MainCameraComponent>, Without<LightCameraComponent>)>,
+    mut main_camera_query: Query<
+        &Transform,
+        (With<MainCameraComponent>, Without<LightCameraComponent>),
+    >,
 ) {
     if let Ok((mut light_camera, _)) = light_camera_query.get_single_mut() {
         if let Ok(main_camera) = main_camera_query.get_single() {
