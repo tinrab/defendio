@@ -8,3 +8,4 @@ pub mod plugin;
 pub mod prototype;
 pub mod state;
 pub mod tilemap;
+pub mod world_material;

@@ -3,6 +3,7 @@ use crate::lighting::light_mesh::make_light_mesh;
 use crate::lighting::pipeline::{
     prepare_instance_buffers, DrawLighting, ExtractedLight, ExtractedLighting, LightingPipeline,
 };
+use crate::lighting::uniform::{prepare_lighting_uniform_buffer, LightingUniformBuffer};
 use crate::tilemap::material::TilemapMaterial;
 use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::core_pipeline::core_3d::Transparent3d;
@@ -38,6 +39,7 @@ use bevy::window::WindowResized;
 mod camera;
 mod light_mesh;
 mod pipeline;
+pub mod uniform;
 
 pub struct LightingPlugin;
 
@@ -45,17 +47,22 @@ impl Plugin for LightingPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(ExtractComponentPlugin::<ExtractedLight>::default())
             .add_plugin(ExtractComponentPlugin::<ExtractedLighting>::default())
-            .add_startup_system(init_lighting)
+            .add_startup_system(setup_lighting)
             .add_system(window_resize_system)
             .add_system(light_camera_update)
             .add_system(lighting_update_system)
             .add_system(material_update_system);
-        app.sub_app_mut(RenderApp)
-            .add_render_command::<Transparent2d, DrawLighting>()
-            .init_resource::<LightingPipeline>()
-            .init_resource::<SpecializedMeshPipelines<LightingPipeline>>()
-            .add_system(queue_lighting_mesh.in_set(RenderSet::Queue))
-            .add_system(prepare_instance_buffers.in_set(RenderSet::Prepare));
+
+        if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
+            render_app
+                .add_render_command::<Transparent2d, DrawLighting>()
+                .init_resource::<LightingPipeline>()
+                .init_resource::<SpecializedMeshPipelines<LightingPipeline>>()
+                .init_resource::<LightingUniformBuffer>()
+                .add_system(queue_lighting_mesh.in_set(RenderSet::Queue))
+                .add_system(prepare_instance_buffers.in_set(RenderSet::Prepare))
+                .add_system(prepare_lighting_uniform_buffer.in_set(RenderSet::Prepare));
+        }
     }
 }
 
@@ -87,7 +94,7 @@ impl LightBundle {
     }
 }
 
-fn init_lighting(
+fn setup_lighting(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
@@ -139,72 +146,6 @@ fn init_lighting(
     ));
 }
 
-fn window_resize_system(
-    mut window_resized_events: EventReader<WindowResized>,
-    lighting_query: Query<&LightingComponent>,
-    mut images: ResMut<Assets<Image>>,
-) {
-    for event in window_resized_events.iter() {
-        let map_image_handle = if let Ok(lighting) = lighting_query.get_single() {
-            &lighting.map_image
-        } else {
-            return;
-        };
-        let map_image = images.get_mut(map_image_handle).unwrap();
-
-        if event.width < 2.0 || event.height < 2.0 {
-            break;
-        }
-        map_image.resize(Extent3d {
-            width: event.width as u32,
-            height: event.height as u32,
-            ..Default::default()
-        });
-    }
-}
-
-fn lighting_update_system(
-    lighting_query: Query<
-        &LightingComponent,
-        Or<(Added<LightingComponent>, Changed<LightingComponent>)>,
-    >,
-    mut tilemap_materials: ResMut<Assets<TilemapMaterial>>,
-) {
-    let map_image = if let Ok(lighting) = lighting_query.get_single() {
-        &lighting.map_image
-    } else {
-        return;
-    };
-
-    for (_, material) in tilemap_materials.iter_mut() {
-        material.lighting_texture = Some(map_image.clone());
-        dbg!(&map_image);
-    }
-}
-
-fn material_update_system(
-    lighting_query: Query<&LightingComponent>,
-    mut tilemap_material_event_reader: EventReader<AssetEvent<TilemapMaterial>>,
-    mut tilemap_materials: ResMut<Assets<TilemapMaterial>>,
-) {
-    let map_image = if let Ok(lighting) = lighting_query.get_single() {
-        &lighting.map_image
-    } else {
-        return;
-    };
-
-    for event in tilemap_material_event_reader.iter() {
-        let handle = match event {
-            AssetEvent::Created { handle } => handle,
-            AssetEvent::Modified { handle } => handle,
-            _ => continue,
-        };
-        if let Some(material) = tilemap_materials.get_mut(handle) {
-            material.lighting_texture = Some(map_image.clone());
-        }
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 fn queue_lighting_mesh(
     transparent_draw_functions: Res<DrawFunctions<Transparent2d>>,
@@ -248,6 +189,71 @@ fn queue_lighting_mesh(
                     });
                 }
             }
+        }
+    }
+}
+
+fn window_resize_system(
+    mut window_resized_events: EventReader<WindowResized>,
+    lighting_query: Query<&LightingComponent>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    for event in window_resized_events.iter() {
+        let map_image_handle = if let Ok(lighting) = lighting_query.get_single() {
+            &lighting.map_image
+        } else {
+            return;
+        };
+        let map_image = images.get_mut(map_image_handle).unwrap();
+
+        if event.width < 2.0 || event.height < 2.0 {
+            break;
+        }
+        map_image.resize(Extent3d {
+            width: event.width as u32,
+            height: event.height as u32,
+            ..Default::default()
+        });
+    }
+}
+
+fn lighting_update_system(
+    lighting_query: Query<
+        &LightingComponent,
+        Or<(Added<LightingComponent>, Changed<LightingComponent>)>,
+    >,
+    mut tilemap_materials: ResMut<Assets<TilemapMaterial>>,
+) {
+    let map_image = if let Ok(lighting) = lighting_query.get_single() {
+        &lighting.map_image
+    } else {
+        return;
+    };
+
+    for (_, material) in tilemap_materials.iter_mut() {
+        material.lighting_texture = Some(map_image.clone());
+    }
+}
+
+fn material_update_system(
+    lighting_query: Query<&LightingComponent>,
+    mut tilemap_material_event_reader: EventReader<AssetEvent<TilemapMaterial>>,
+    mut tilemap_materials: ResMut<Assets<TilemapMaterial>>,
+) {
+    let map_image = if let Ok(lighting) = lighting_query.get_single() {
+        &lighting.map_image
+    } else {
+        return;
+    };
+
+    for event in tilemap_material_event_reader.iter() {
+        let handle = match event {
+            AssetEvent::Created { handle } => handle,
+            AssetEvent::Modified { handle } => handle,
+            _ => continue,
+        };
+        if let Some(material) = tilemap_materials.get_mut(handle) {
+            material.lighting_texture = Some(map_image.clone());
         }
     }
 }

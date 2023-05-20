@@ -21,10 +21,6 @@ pub struct TilemapMaterial {
 }
 
 impl Material2d for TilemapMaterial {
-    fn vertex_shader() -> ShaderRef {
-        "shaders/tilemap.wgsl".into()
-    }
-
     fn fragment_shader() -> ShaderRef {
         "shaders/tilemap.wgsl".into()
     }

@@ -1,3 +1,4 @@
+use bevy::math::Affine3A;
 use std::error::Error;
 
 use bevy::prelude::*;
@@ -16,6 +17,7 @@ use defendio_app::state::AppState;
 use defendio_app::tilemap::bundle::TilemapBundle;
 use defendio_app::tilemap::material::TilemapMaterial;
 use defendio_app::tilemap::plugin::TilemapPlugin;
+use defendio_app::world_material::material::WorldMaterial;
 
 #[derive(Component)]
 struct LightMovement {}
@@ -51,43 +53,66 @@ fn on_game_state_enter(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<TilemapMaterial>>,
     mut color_materials: ResMut<Assets<ColorMaterial>>,
-    images: Res<Assets<Image>>,
+    mut world_materials: ResMut<Assets<WorldMaterial>>,
+    mut images: Res<Assets<Image>>,
     tilemap_asset_group: Res<TilemapAssetGroup>,
     texture_atlases: Res<Assets<TextureAtlas>>,
+    asset_server: Res<AssetServer>,
 ) {
-    // commands.spawn(MaterialMesh2dBundle {
-    //     mesh: meshes.add(shape::Circle::new(0.5).into()).into(),
-    //     material: color_materials.add(ColorMaterial::from(Color::rgb(7.5, 0.0, 7.5))),
-    //     transform: Transform::from_translation(Vec3::new(-0.5, 0., 0.1)),
-    //     ..default()
-    // });
     commands.spawn(TilemapBundle::make(
-        tilemap_asset_group,
+        &tilemap_asset_group,
         materials,
         meshes.as_mut(),
-        images,
-        texture_atlases,
+        &images,
+        &texture_atlases,
     ));
 
-    for _ in 0..10 {
-        commands.spawn(LightBundle::new(
-            Vec3::new(
-                rand::random::<f32>() * 50.0,
-                rand::random::<f32>() * 50.0,
-                0.0,
-            ),
-            rand::random::<f32>() * 20.0 + 5.0,
-            Color::hsl(rand::random::<f32>() * 360.0, 0.6, 0.8),
-        ));
-    }
+    // for _ in 0..30 {
+    //     commands.spawn(LightBundle::new(
+    //         Vec3::new(
+    //             rand::random::<f32>() * 50.0,
+    //             rand::random::<f32>() * 50.0,
+    //             0.0,
+    //         ),
+    //         rand::random::<f32>() * 20.0 + 5.0,
+    //         Color::hsl(rand::random::<f32>() * 360.0, 0.6, 0.8),
+    //     ));
+    // }
 
     commands.spawn((
         LightBundle::new(Vec3::new(5.0, 0.0, 0.0), 10.0, Color::WHITE * 10.0),
         LightMovement {},
     ));
+
+    let monkey_d: Handle<Image> = asset_server.load("graphics/monkey-d.png");
+    let monkey_n: Handle<Image> = asset_server.load("graphics/monkey-n.png");
+    for i in 0..=5 {
+        commands.spawn(
+            (MaterialMesh2dBundle {
+                mesh: meshes
+                    .add(shape::Quad::new(Vec2::new(10.0, 10.0)).into())
+                    .into(),
+                material: world_materials.add(WorldMaterial {
+                    base_color: Color::RED,
+                    base_color_texture: Some(monkey_d.clone()),
+                    normal_texture: Some(monkey_n.clone()),
+                    ..Default::default()
+                }),
+                transform: Transform::from_translation(Vec3::new(
+                    i as f32 * 10.0,
+                    10.0,
+                    rand::random::<f32>() * 0.1,
+                ))
+                .with_scale(Vec3::new(2.0, 2.0, 1.0)),
+                ..Default::default()
+            }),
+        );
+    }
 }
 
-fn on_game_state_update() {}
+fn on_game_state_update() {
+    // std::thread::sleep(std::time::Duration::from_millis(500));
+}
 
 fn move_light(
     camera_query: Query<(&Camera, &GlobalTransform), With<MainCameraComponent>>,

@@ -3,7 +3,7 @@ use crate::lighting::{LightComponent, LightingComponent};
 use bevy::core_pipeline::core_3d::Transparent3d;
 use bevy::ecs::query::{QueryItem, ROQueryItem};
 use bevy::ecs::system::lifetimeless::{Read, SRes};
-use bevy::ecs::system::SystemParamItem;
+use bevy::ecs::system::{SystemParamItem, SystemState};
 use bevy::pbr::{
     MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup, SetMeshViewBindGroup,
 };
@@ -16,11 +16,14 @@ use bevy::render::render_phase::{
     TrackedRenderPass,
 };
 use bevy::render::render_resource::{
-    Buffer, BufferInitDescriptor, BufferUsages, PipelineCache, RenderPipelineDescriptor,
+    BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType,
+    BufferInitDescriptor, BufferUsages, PipelineCache, RenderPipelineDescriptor, ShaderStages,
     SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
     SpecializedRenderPipeline, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode,
 };
+use bevy::render::render_resource::{ShaderType, StorageBuffer, UniformBuffer};
 use bevy::render::renderer::RenderDevice;
+use bevy::render::texture::DefaultImageSampler;
 use bevy::render::view::ExtractedView;
 use bevy::sprite::{
     Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, SetMesh2dBindGroup, SetMesh2dViewBindGroup,
@@ -45,12 +48,12 @@ pub struct DrawMeshInstanced;
 
 #[derive(Component)]
 pub struct ExtractedLight {
-    instance: LightInstanceBin,
+    pub instance: GpuLight,
 }
 
-#[derive(Clone, Copy, Pod, Zeroable)]
+#[derive(Default, Clone, Copy, Pod, Zeroable, ShaderType)]
 #[repr(C)]
-struct LightInstanceBin {
+pub struct GpuLight {
     pub position: Vec3,
     pub scale: f32,
     pub color: [f32; 4],
@@ -66,7 +69,7 @@ impl ExtractComponent for ExtractedLight {
 
     fn extract_component((light, transform): QueryItem<'_, Self::Query>) -> Option<Self> {
         Some(ExtractedLight {
-            instance: LightInstanceBin {
+            instance: GpuLight {
                 position: transform.translation,
                 scale: light.scale,
                 color: light.color.as_rgba_f32(),
@@ -114,7 +117,7 @@ impl SpecializedMeshPipeline for LightingPipeline {
             ATTRIBUTE_INTENSITY.at_shader_location(1),
         ])?];
         descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: std::mem::size_of::<LightInstanceBin>() as u64,
+            array_stride: std::mem::size_of::<GpuLight>() as u64,
             step_mode: VertexStepMode::Instance,
             attributes: vec![
                 // position and scale

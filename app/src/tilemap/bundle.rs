@@ -15,11 +15,11 @@ pub struct TilemapBundle {
 
 impl TilemapBundle {
     pub fn make(
-        tilemap_asset_group: Res<TilemapAssetGroup>,
+        tilemap_asset_group: &Res<TilemapAssetGroup>,
         mut materials: ResMut<Assets<TilemapMaterial>>,
         meshes: &mut Assets<Mesh>,
-        images: Res<Assets<Image>>,
-        texture_atlases: Res<Assets<TextureAtlas>>,
+        images: &Res<Assets<Image>>,
+        texture_atlases: &Res<Assets<TextureAtlas>>,
     ) -> Self {
         let tilemap = RandomTilemapGenerator::generate();
         let chunk = tilemap.get_chunk(IVec2::ZERO).unwrap();

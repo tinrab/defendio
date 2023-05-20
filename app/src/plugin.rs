@@ -4,6 +4,7 @@ use crate::interaction::InteractionPlugin;
 use crate::lighting::LightingPlugin;
 use crate::state::AppState;
 use crate::tilemap::plugin::TilemapPlugin;
+use crate::world_material::plugin::WorldMaterialPlugin;
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 
@@ -14,6 +15,7 @@ impl Plugin for AppCorePlugin {
         app.add_state::<AppState>()
             .add_plugin(AssetLoadPlugin)
             .add_plugin(InteractionPlugin)
+            .add_plugin(WorldMaterialPlugin)
             .add_plugin(LightingPlugin)
             .add_plugin(TilemapPlugin)
             .add_plugin(MainCameraPlugin);

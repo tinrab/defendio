@@ -37,6 +37,7 @@ fn on_load_enter(
 
     let tilemap_shader: Handle<Shader> = asset_server.load("shaders/tilemap.wgsl");
     let light_shader: Handle<Shader> = asset_server.load("shaders/light.wgsl");
+    let world_shader: Handle<Shader> = asset_server.load("shaders/world.wgsl");
 
     commands.insert_resource(AssetLoadState {
         check_timer: Timer::from_seconds(0.1f32, TimerMode::Repeating),
@@ -44,6 +45,7 @@ fn on_load_enter(
             tiles_image.clone_untyped(),
             tilemap_shader.clone_untyped(),
             light_shader.clone_untyped(),
+            world_shader.clone_untyped(),
         ],
         loaded_handles: Default::default(),
     });

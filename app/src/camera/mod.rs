@@ -50,8 +50,9 @@ impl MainCameraBundle {
                     scaling_mode: ScalingMode::WindowSize(32.0),
                     ..Default::default()
                 },
-                // tonemapping: Tonemapping::TonyMcMapface,
-                tonemapping: Tonemapping::None,
+                tonemapping: Tonemapping::TonyMcMapface,
+                // tonemapping: Tonemapping::None,
+                transform: Transform::from_translation(Vec3::new(5.0, 5.0, 1000.0 - 0.1)),
                 ..Default::default()
             },
         }
@@ -59,8 +60,8 @@ impl MainCameraBundle {
 }
 
 fn on_game_state_enter(mut commands: Commands) {
-    // commands.spawn((MainCameraBundle::new(), BloomSettings::OLD_SCHOOL));
-    commands.spawn(MainCameraBundle::new());
+    commands.spawn((MainCameraBundle::new(), BloomSettings::OLD_SCHOOL));
+    // commands.spawn(MainCameraBundle::new());
 }
 
 fn move_camera(
