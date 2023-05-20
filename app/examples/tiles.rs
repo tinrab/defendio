@@ -84,30 +84,45 @@ fn on_game_state_enter(
         LightMovement {},
     ));
 
+    let box_d: Handle<Image> = asset_server.load("graphics/box-d.png");
+    let box_n: Handle<Image> = asset_server.load("graphics/box-n.png");
     let monkey_d: Handle<Image> = asset_server.load("graphics/monkey-d.png");
-    let monkey_n: Handle<Image> = asset_server.load("graphics/monkey-n.png");
+    let monkey_n: Handle<Image> = asset_server.load("graphics/monkey-d_n.png");
     for i in 0..=5 {
         commands.spawn(
             (MaterialMesh2dBundle {
                 mesh: meshes
-                    .add(shape::Quad::new(Vec2::new(10.0, 10.0)).into())
+                    .add(shape::Quad::new(Vec2::new(4.0, 4.0)).into())
                     .into(),
                 material: world_materials.add(WorldMaterial {
-                    base_color: Color::RED,
-                    base_color_texture: Some(monkey_d.clone()),
-                    normal_texture: Some(monkey_n.clone()),
+                    base_color_texture: Some(box_d.clone()),
+                    normal_texture: Some(box_n.clone()),
                     ..Default::default()
                 }),
                 transform: Transform::from_translation(Vec3::new(
                     i as f32 * 10.0,
                     10.0,
                     rand::random::<f32>() * 0.1,
-                ))
-                .with_scale(Vec3::new(2.0, 2.0, 1.0)),
+                )),
                 ..Default::default()
             }),
         );
     }
+    commands.spawn(
+        (MaterialMesh2dBundle {
+            mesh: meshes
+                .add(shape::Quad::new(Vec2::new(10.0, 10.0)).into())
+                .into(),
+            material: world_materials.add(WorldMaterial {
+                base_color: Color::GRAY,
+                base_color_texture: Some(monkey_d.clone()),
+                normal_texture: Some(monkey_n.clone()),
+                ..Default::default()
+            }),
+            transform: Transform::from_translation(Vec3::new(10.0, 0.0, 0.01)),
+            ..Default::default()
+        }),
+    );
 }
 
 fn on_game_state_update() {

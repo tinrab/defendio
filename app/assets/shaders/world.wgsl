@@ -59,21 +59,29 @@ fn fragment(
         output_color = output_color * textureSample(base_color_texture, base_color_sampler, in.uv);
     }
 
-//    if ((material.flags & WORLD_MATERIAL_FLAGS_NORMAL_TEXTURE_BIT) != 0u) {
-//        let normal_value = textureSample(normal_texture, normal_sampler, in.uv);
-//
-//        for (var i: u32 = 0u; i < arrayLength(&lighting.lights); i = i + 1u) {
-//            let light = lighting.lights[i];
-//            let world_to_light = light.position - in.world_position.xyz;
-//            let dist = length(world_to_light);
-//            let dir = normalize(world_to_light);
-//
-//            let radiance = light.color * (1.0 / pow(dist, 2.0));
-//            let strength = max(dot(normal_value.xyz, dir), 0.0);
-//
-//            output_color += radiance * strength;
-//        }
-//    }
+    if ((material.flags & WORLD_MATERIAL_FLAGS_NORMAL_TEXTURE_BIT) != 0u) {
+        let normal_value = normalize(
+            vec4(textureSample(normal_texture, normal_sampler, in.uv).xyz * 2.0 - 1.0, 0.0)
+        ).xyz;
+
+        var lit_color = vec4(0.0);
+        for (var i: u32 = 0u; i < arrayLength(&lighting.lights); i = i + 1u) {
+            let light = lighting.lights[i];
+            let l_pos = light.position.xyz;
+            let f_pos = in.world_position.xyz;
+
+            var dist = length(l_pos - f_pos);
+            let dir = normalize(vec3(l_pos.xy, 30.0) - vec3(f_pos.xy, 0.0));
+
+            let strength = max(dot(dir, normal_value.xyz), 0.0);
+            let diffuse = light.color * strength;
+
+            lit_color += vec4(diffuse.xyz, 1.0) * (1.0 / dist);
+        }
+        let a = output_color.a;
+        output_color *= (lit_color + vec4(0.2, 0.2, 0.2, 1.0));
+        output_color.a = a;
+    }
 #endif
 
     if ((material.flags & WORLD_MATERIAL_FLAGS_EMISSIVE_TEXTURE_BIT) != 0u) {
