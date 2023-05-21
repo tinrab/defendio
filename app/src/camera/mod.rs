@@ -1,4 +1,5 @@
-use crate::interaction::input_action::InputAction;
+use crate::input_manager::action::InputAction;
+use crate::input_manager::action_state::InputActionState;
 use crate::state::AppState;
 use bevy::core_pipeline::bloom::BloomSettings;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
@@ -6,7 +7,6 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::render::view::RenderLayers;
-use leafwing_input_manager::prelude::*;
 
 pub struct MainCameraPlugin;
 
@@ -67,23 +67,22 @@ fn on_game_state_enter(mut commands: Commands) {
 fn move_camera(
     time: Res<Time>,
     mut query: Query<(&mut MainCameraComponent, &mut Transform)>,
-    input_query: Query<&ActionState<InputAction>>,
+    input_action_state: Res<InputActionState>,
     //     mut query: Query<(&mut MainCameraComponent, &mut Transform)>,
 ) {
     let (camera, mut camera_transform) = query.single_mut();
     // let player_transform = player_query.single();
 
     // camera.target_position = Some(player_transform.translation);
-    let action_state = input_query.single();
     let mut dv = Vec3::ZERO;
-    if action_state.pressed(InputAction::Left) {
+    if input_action_state.pressed(InputAction::Left) {
         dv.x -= 1.0f32;
-    } else if action_state.pressed(InputAction::Right) {
+    } else if input_action_state.pressed(InputAction::Right) {
         dv.x += 1.0f32;
     }
-    if action_state.pressed(InputAction::Up) {
+    if input_action_state.pressed(InputAction::Up) {
         dv.y += 1.0f32;
-    } else if action_state.pressed(InputAction::Down) {
+    } else if input_action_state.pressed(InputAction::Down) {
         dv.y -= 1.0f32;
     }
     camera_transform.translation += (dv) * CAMERA_BASE_SPEED * time.delta_seconds();

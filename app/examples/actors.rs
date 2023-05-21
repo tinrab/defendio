@@ -1,15 +1,15 @@
 use std::error::Error;
 
-use bevy::math::Affine3A;
 use bevy::prelude::*;
 use bevy::render::render_resource::{FilterMode, SamplerDescriptor};
 use bevy::render::texture::ImageSampler;
 use bevy::render::view::RenderLayers;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy::window::WindowResolution;
-
 use defendio_app::asset::TilemapAssetGroup;
 use defendio_app::camera::{MainCameraBundle, MainCameraComponent, MainCameraPlugin};
+use defendio_app::interaction::input_action::InputActionPlugin;
+use defendio_app::interaction::{InteractionPlugin, MousePosition};
 use defendio_app::lighting::{LightBundle, LightingPlugin};
 use defendio_app::plugin::AppCorePlugin;
 use defendio_app::state::AppState;
@@ -17,9 +17,6 @@ use defendio_app::tilemap::bundle::TilemapBundle;
 use defendio_app::tilemap::material::TilemapMaterial;
 use defendio_app::tilemap::plugin::TilemapPlugin;
 use defendio_app::world_material::material::WorldMaterial;
-
-#[derive(Component)]
-struct LightMovement {}
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     App::new()
@@ -49,16 +46,11 @@ fn on_game_state_enter(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<TilemapMaterial>>,
+    mut color_materials: ResMut<Assets<ColorMaterial>>,
+    mut world_materials: ResMut<Assets<WorldMaterial>>,
     mut images: Res<Assets<Image>>,
     tilemap_asset_group: Res<TilemapAssetGroup>,
     texture_atlases: Res<Assets<TextureAtlas>>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn(TilemapBundle::make(
-        &tilemap_asset_group,
-        materials,
-        meshes.as_mut(),
-        &images,
-        &texture_atlases,
-    ));
 }

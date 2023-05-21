@@ -2,7 +2,7 @@ pub mod asset;
 pub mod camera;
 pub mod config;
 pub mod error;
-pub mod interaction;
+pub mod input_manager;
 pub mod lighting;
 pub mod plugin;
 pub mod prototype;
